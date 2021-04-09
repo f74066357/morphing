@@ -88,6 +88,33 @@ def writeimg():
             #blankimg[i,j]=color #OpenCV中圖片BGR
     cv2.imshow('test', blankimg)
 
+# def getweight(x,y,line): #傳入一個點，算出該點在線段獲得的Weight
+#     a=1.0,b=2.0,p=2.0
+#     d=0.0
+
+def getu(x,y,line): #算出該點在線段獲得的u
+    px,py,qx,qy=line[0],line[1],line[2],line[3]
+    X_P_x = x-px
+    X_P_y = y-py
+    Q_P_x = qx - px
+    Q_P_y = qy - py
+    length = math.sqrt((qx-px)*(qx-px)+(qy-py)*(qy-py)) #長度
+    u = ((X_P_x * Q_P_x) + (X_P_y * Q_P_y)) / (length * length)
+    return u
+
+def getv(x,y,line):#算出該點在線段獲得的v
+    px,py,qx,qy=line[0],line[1],line[2],line[3]
+    X_P_x = x - px
+    X_P_y = y - py
+    Q_P_x = qx - px
+    Q_P_y = qy - py
+    Perp_Q_P_x = Q_P_y
+    Perp_Q_P_y = -Q_P_x
+    length = math.sqrt((qx-px)*(qx-px)+(qy-py)*(qy-py)) #長度
+    v = ((X_P_x * Perp_Q_P_x) + (X_P_y * Perp_Q_P_y)) / length
+    return v
+
+###############################
 def wrapping():
     #original img: img1 & img2
     ratio=0.5
@@ -101,15 +128,19 @@ def wrapping():
             rightXSum_x = 0.0
             rightXSum_y = 0.0
             rightWeightSum = 0.0
-            for (i in range (len(lline))):
-                #左圖為來源
-                #leftline = lline[i] = (px1 py1 qx1 qy1) 
-                dstline=[] #(dpx dpy dqx dqy)
+            # for (i in range (len(lline))):
+            #     #左圖為來源
+            #     #leftline = lline[i] = (px1 py1 qx1 qy1) 
+            #     dstline=[] #(dpx dpy dqx dqy)
                 
-                #右圖為來源 
-                #rightline = rline[i] = (px2 py2 qx2 qy2)
+            #     #右圖為來源 
+            #     #rightline = rline[i] = (px2 py2 qx2 qy2)
+            #     dstline=[] #(dpx dpy dqx dqy)
+
+#######################################
 
 
+#add weight
 alpha=0.5
 def addimg():
     global alpha
@@ -141,6 +172,7 @@ while (1):
         #writeimg()
         #pqtomld(rline[0])
         #addimg()
-        wrapping()
+        #wrapping()
+        print(getu(3,10,rline[0]))
 
 cv2.destroyAllWindows()
