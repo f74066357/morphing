@@ -25,15 +25,18 @@ def draw1(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             px1=x
             py1=y
+            print("LBUTTONDOWN"+str(x)+" "+str(y))
         elif event ==cv2.EVENT_LBUTTONUP:    #滑鼠鬆開停止畫線
             qx1=x
             qy1=y
             cv2.line(img1, (int(px1), int(py1)), (int(qx1), int(qy1)), (0, 0, 255), 3)
+            #img1=tempimg.copy()
             tempimg=img1.copy()
             cv2.imshow('left',img1)
             tleft = [px1,py1,qx1,qy1]  #左圖線段
             lline.append(tleft) #記錄左圖線段 
             counter=counter-1
+            print("LBUTTONUP"+str(x)+" "+str(y))
         elif event == cv2.EVENT_FLAG_LBUTTON:
             tempimg=img1.copy()
             cv2.imshow('left',img1)
@@ -47,6 +50,7 @@ def draw2(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             px2=x
             py2=y
+            print("RBUTTONDOWN"+str(x)+" "+str(y))
         elif event ==cv2.EVENT_LBUTTONUP:    #滑鼠鬆開停止畫線
             qx2=x
             qy2=y
@@ -56,19 +60,20 @@ def draw2(event, x, y, flags, param):
             tright = [px2,py2,qx2,qy2] #右圖線段 
             rline.append(tright) #記錄右圖線段 
             counter=counter-1
+            print("RBUTTONUP"+str(x)+" "+str(y))
+            genWarpLine()
+            showWarpLine()
         elif event == cv2.EVENT_FLAG_LBUTTON:
             tempimg=img2.copy()
             cv2.imshow('right',img2)
 
-# def showWarpLine():
-    
-#     for i in range(len(warpLine)):
-#         px,py,qx,qy=warpLine[0],line[1],line[2],line[3]
-#         cv2.line(img1, (int(px2), int(py2)), (int(qx2), int(qy2)), (0, 0, 255), 3)
+def showWarpLine():
+    for i in range(len(warpLine)):
+        px,py,qx,qy=warpLine[i][0],warpLine[i][1],warpLine[i][2],warpLine[i][3]
+        cv2.line(img1, (int(px), int(py)), (int(qx), int(qy)), (255, 255, 255), 3)
+        cv2.line(img2, (int(px), int(py)), (int(qx), int(qy)), (255, 255, 255), 3)
 
-# 	return
-
-def pqtomld(line): #已知PQ線段 算出中點,長度,角度
+def pqtomld(line): #已知線段 算出中點,長度,角度
     px,py,qx,qy=line[0],line[1],line[2],line[3]
     mx=(px+qx)/2 #中點
     my=(py+qy)/2 
@@ -78,7 +83,7 @@ def pqtomld(line): #已知PQ線段 算出中點,長度,角度
     return mld
 
 #mld=[mx,my,length,degree]
-def mldtopq(mldlist): #已知中點,長度,角度 算出PQ線段
+def mldtopq(mldlist): #已知中點,長度,角度 算出線段
     mx,my,length,degree=mldlist[0],mldlist[1],mldlist[2],mldlist[3]
     tmpx = 0.5 * length * math.cos(degree)
     tmpy = 0.5 * length * math.sin(degree)
@@ -96,31 +101,13 @@ cv2.setMouseCallback('left', draw1,img1)
 cv2.namedWindow('right')
 img2 = cv2.imread("image/cheetah.jpg", cv2.IMREAD_COLOR)
 cv2.setMouseCallback('right', draw2,img2)
+
 rows,cols = img1.shape[0],img1.shape[1]
+print(rows,cols)
 new_image = np.zeros((rows,cols,3), np.uint8)
 left_image = np.zeros((rows,cols,3), np.uint8)
 right_image = np.zeros((rows,cols,3), np.uint8)
 tempimg=np.zeros((rows,cols,3), np.uint8)
-
-# def changepixel(): 
-#     cv2.namedWindow('test')
-#     imgtest = img1.copy()
-#     rows,cols = imgtest.shape[0],imgtest.shape[1]
-#     for i in range(rows): #rows
-#         for j in range(cols): #cols
-#             imgtest[i,j]=(255,0,0) #OpenCV中圖片BGR
-#     cv2.imshow('test', imgtest)
-
-# def writeimg():
-#     cv2.namedWindow('test')
-#     rows,cols = img1.shape[0],img1.shape[1]
-#     blankimg = np.zeros((rows,cols,3), np.uint8)
-#     for i in range(rows): #rows
-#         for j in range(cols): #cols
-#             color=(img1[i,j]+img2[i,j])/2
-#             #blankimg[i,j]=color #OpenCV中圖片BGR
-#     cv2.imshow('test', blankimg)
-#     cv2.imwrite('write.jpg', blankimg)
 
 def getu(x,y,line): #算出該點在線段獲得的u
     px,py,qx,qy=line[0],line[1],line[2],line[3]
@@ -176,8 +163,17 @@ def caldegree(line):
     degree = math.atan2((qy - py), (qx - px))
     return degree
 
+maxx,maxy=0,0
+
 def bilinear(img,x,y): #(image,srcx,srcy)
-    width,height=img.shape[0],img.shape[1]
+    #print(x,y) max:188.99826066206413 254.99930133116848
+    global maxx,maxy
+    width,height=img.shape[0],img.shape[1] #189 255
+    if(x>maxx):
+        maxx=x
+    if(y>maxy):
+        maxy=y 
+    #print(width,height) 189 255
     x_floor = int(x)
     y_floor = int(y)
     x_ceil = int(x)+1
@@ -188,20 +184,21 @@ def bilinear(img,x,y): #(image,srcx,srcy)
     if (y_ceil >= height - 1):
         y_ceil = height - 1
 
-    leftdown=img[x_floor,y_floor]
+    '''
+    lefttop             righttop
+
+            point(x,y)
+
+    leftdown            rightdown
+    '''
+    leftdown=img[x_floor,y_floor] #[ b g r]
     lefttop=img[x_floor,y_ceil]
     rightdown=img[x_ceil,y_floor]
     righttop=img[x_ceil,y_ceil]  
-    
-    # leftdown=img[y_floor, x_floor]
-    # lefttop=img[y_ceil, x_floor]
-    # rightdown=img[y_floor, x_ceil]
-    # righttop=img[y_ceil, x_ceil]
 
     out=[0,0,0]
     for i in range (3):
         out[i]=(1 - a) * (1 - b) * leftdown[i] + a * (1 - b) * rightdown[i] + a * b * righttop[i] + (1 - a) * b * lefttop[i]
-    
     return out
 
 warpLine=[]
@@ -235,20 +232,23 @@ def genWarpLine():
 ###############################
 def runwrap():
     print('in runwrap')
-    genWarpLine()
     wrapping()
-    pic1 = cv2.imread("result/left.jpg")
-    pic2 = cv2.imread("result/right.jpg")
-    dst=cv2.addWeighted(pic1, 0.5, pic2, 0.5, 0.0)
-    cv2.imwrite("result/half.jpg", dst)
+    # pic1 = cv2.imread("result/left.jpg")
+    # pic2 = cv2.imread("result/right.jpg")
+    # dst=cv2.addWeighted(pic1, 0.5, pic2, 0.5, 0.0)
+    # cv2.imwrite("result/half.jpg", dst)
 
+frame_index=0
 def wrapping():
     print('in wrapping')
+    global frame_index
     #original img: img1 & img2
-    img1 = cv2.imread("image/women.jpg", cv2.IMREAD_COLOR)
-    img2 = cv2.imread("image/cheetah.jpg", cv2.IMREAD_COLOR)
-    ratio = 0.5
-    #ratio = (frame_index + 1) / (frame_count + 1)
+    limg= cv2.imread("image/women.jpg", cv2.IMREAD_COLOR)
+    rimg = cv2.imread("image/cheetah.jpg", cv2.IMREAD_COLOR)
+    ratio = (frame_index + 1) / (frame_count + 1)
+    print('ratio'+' '+str(ratio))
+    # frame_index=frame_index+1
+    #189 255
     for x in range(rows): #rows
         for y in range(cols): #cols
             dstx=x
@@ -259,7 +259,7 @@ def wrapping():
                 #leftline = lline[i] = (px1 py1 qx1 qy1) 
                 dstline=[] #(dpx dpy dqx dqy)
                 src_line = lline[i]
-                dst_line = warpLine[frame_count*i] #frame_count*i
+                dst_line = warpLine[frame_index] #frame_count*i
                 newu = getu(dstx,dsty,dst_line) #(x,y,line)
                 newv = getv(dstx,dsty,dst_line) #(x,y,line)
                 src_point = getpoint(newu, newv,src_line) #(u,v,line)
@@ -273,7 +273,7 @@ def wrapping():
                 #rightline = rline[i] = (px2 py2 qx2 qy2)
                 dstline=[] #(dpx dpy dqx dqy)
                 src_line = rline[i]
-                dst_line = warpLine[frame_count*i]
+                dst_line = warpLine[frame_index]
                 newu = getu(dstx,dsty,dst_line) #(x,y,line)
                 newv = getv(dstx,dsty,dst_line) #(x,y,line)
                 src_point = getpoint(newu, newv,src_line) #(u,v,line)
@@ -306,21 +306,22 @@ def wrapping():
             if (rsrcy >= cols):
                 rsrcy = cols - 1
 
-            leftout=bilinear(img1,lsrcx,lsrcy)
-            rightout=bilinear(img2,rsrcx,rsrcy)
+            leftout=bilinear(limg,lsrcx,lsrcy)
+            rightout=bilinear(rimg,rsrcx,rsrcy)
             
             b=(1 - ratio)*leftout[0]+ratio*rightout[0]
             g=(1 - ratio)*leftout[1]+ratio*rightout[1]
             r=(1 - ratio)*leftout[2]+ratio*rightout[2]
 
             new_image[x,y]=(b,g,r)
-            left_image[x,y]=(b,g,r)
-            right_image[x,y]=(b,g,r)
+            left_image[x,y]=leftout
+            right_image[x,y]=rightout
 
     cv2.imwrite("result/new.jpg", new_image)
     cv2.imwrite("result/left.jpg", left_image)
     cv2.imwrite("result/right.jpg", right_image)
 
+    print('max:'+str(maxx)+" "+str(maxy))
         #######################################
 
 
