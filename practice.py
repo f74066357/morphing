@@ -102,8 +102,7 @@ cv2.namedWindow('right')
 img2 = cv2.imread("image/cheetah.jpg", cv2.IMREAD_COLOR)
 cv2.setMouseCallback('right', draw2,img2)
 
-rows,cols = img1.shape[0],img1.shape[1]
-print(rows,cols)
+rows,cols = img1.shape[0],img1.shape[1]  #189 255 
 new_image = np.zeros((rows,cols,3), np.uint8)
 left_image = np.zeros((rows,cols,3), np.uint8)
 right_image = np.zeros((rows,cols,3), np.uint8)
@@ -116,7 +115,7 @@ def getu(x,y,line): #算出該點在線段獲得的u
     Q_Px = qx - px
     Q_Py = qy - py
     length = math.sqrt((qx-px)*(qx-px)+(qy-py)*(qy-py)) #長度
-    u = ((X_Px * Q_Px) + (X_Py * Q_Py)) / (length * length)
+    u = ((X_Px * Q_Px) + (X_Py * Q_Py)) / (length * length) #[(x-p)(q-p)]/(len)^2
     return u
 
 def getv(x,y,line):#算出該點在線段獲得的v
@@ -125,16 +124,17 @@ def getv(x,y,line):#算出該點在線段獲得的v
     X_Py = y - py
     Q_Px = qx - px
     Q_Py = qy - py
-    Perp_QPx = Q_Py
-    Perp_QPy = -Q_Px
+    Perp_QPx = Q_Py #垂直
+    Perp_QPy = -Q_Px #垂直
     length = math.sqrt((qx-px)*(qx-px)+(qy-py)*(qy-py)) #長度
     v = ((X_Px * Perp_QPx) + (X_Py * Perp_QPy)) / length
     return v
 
 def getweight(x,y,line):
     px,py,qx,qy=line[0],line[1],line[2],line[3]
-    a,b,p=1,2,2
+    a,b,p=1,2,0
     d = 0.0
+    weight=0.0
     u = getu(x,y,line)
     if (u > 1.0):
         d = math.sqrt((x - qx) * (x - qx) + (y - qy) * (y - qy)) 
@@ -144,6 +144,7 @@ def getweight(x,y,line):
         d = abs(getv(x,y,line))
     length = math.sqrt((qx-px)*(qx-px)+(qy-py)*(qy-py)) #長度
     weight = math.pow(math.pow(length, p) / (a + d), b)
+    #print(weight)
     return weight
 
 def getpoint(u,v,line):
@@ -168,7 +169,7 @@ maxx,maxy=0,0
 def bilinear(img,x,y): #(image,srcx,srcy)
     #print(x,y) max:188.99826066206413 254.99930133116848
     global maxx,maxy
-    width,height=img.shape[0],img.shape[1] #189 255
+    width,height=img.shape[1],img.shape[0] #189 255
     if(x>maxx):
         maxx=x
     if(y>maxy):
@@ -191,10 +192,10 @@ def bilinear(img,x,y): #(image,srcx,srcy)
 
     leftdown            rightdown
     '''
-    leftdown=img[x_floor,y_floor] #[ b g r]
-    lefttop=img[x_floor,y_ceil]
-    rightdown=img[x_ceil,y_floor]
-    righttop=img[x_ceil,y_ceil]  
+    leftdown=img[y_floor,x_floor] #[ b g r]
+    lefttop=img[y_ceil,x_floor]
+    rightdown=img[y_floor,x_ceil]
+    righttop=img[y_ceil,x_ceil]  
 
     out=[0,0,0]
     for i in range (3):
@@ -205,7 +206,7 @@ warpLine=[]
 frame_count=1
 def genWarpLine():
     global frame_count
-    global warpLine
+    global warpLine,lline,rline
     warpLine.clear()
     for i in range (len(lline)):
         ldegree,rdegree=caldegree(lline[i]),caldegree(rline[i])
@@ -224,104 +225,157 @@ def genWarpLine():
             mldlist=[mx,my,length,degree]
             pqline=mldtopq(mldlist)
             warpLine.append(pqline)
-    print(len(warpLine))
-    print(warpLine)
+    #print(len(warpLine))
+    #print(warpLine)
     return
 
 
 ###############################
 def runwrap():
     print('in runwrap')
-    wrapping()
+    for k in range (frame_count):
+        warpping(k)
+    #warpping()
     # pic1 = cv2.imread("result/left.jpg")
     # pic2 = cv2.imread("result/right.jpg")
     # dst=cv2.addWeighted(pic1, 0.5, pic2, 0.5, 0.0)
     # cv2.imwrite("result/half.jpg", dst)
 
-frame_index=0
-def wrapping():
+# frame_index=0
+'''
+X->COLS 255
+Y->ROWS 189
+'''
+
+def warpping(k):
     print('in wrapping')
-    global frame_index
+    global lline,rline,warpLine
+    # lline = [[119.000000,43.000000,117.000000,101.000000],[90.000000,130.000000,137.000000,130.000000]]
+    # warpLine =[[124.235504,45.478153,124.264496,117.021851],[85.985870,154.729965,153.014130,156.270035]]
+    # rline =[[129.000000,48.000000,132.000000,133.000000],[82.000000,179.000000,169.000000,183.000000]]
+    # global frame_index
     #original img: img1 & img2
     limg= cv2.imread("image/women.jpg", cv2.IMREAD_COLOR)
     rimg = cv2.imread("image/cheetah.jpg", cv2.IMREAD_COLOR)
-    ratio = (frame_index + 1) / (frame_count + 1)
+    ratio = (k + 1) / (frame_count + 1)
     print('ratio'+' '+str(ratio))
     # frame_index=frame_index+1
-    #189 255
-    for x in range(rows): #rows
-        for y in range(cols): #cols
+    print(cols,rows)# 255 189
+    for x in range(cols): #cols /width
+        for y in range(rows): #rows /height
             dstx=x
             dsty=y
-            leftxsum,leftysum,leftWeightSum,rightxsum,rightysum,rightWeightSum=0.0,0.0,0.0,0.0,0.0,0.0
+            #print('dst'+str(dstx)+' '+str(dsty))
+            leftxsum,leftysum,leftWeightSum= 0.0,0.0,0.0
+            rightxsum,rightysum,rightWeightSum=0.0,0.0,0.0
             for i in range(len(lline)):
                 #左圖為來源
                 #leftline = lline[i] = (px1 py1 qx1 qy1) 
                 dstline=[] #(dpx dpy dqx dqy)
                 src_line = lline[i]
-                dst_line = warpLine[frame_index] #frame_count*i
+                dst_line = warpLine[i]
                 newu = getu(dstx,dsty,dst_line) #(x,y,line)
                 newv = getv(dstx,dsty,dst_line) #(x,y,line)
                 src_point = getpoint(newu, newv,src_line) #(u,v,line)
+                #dst point 轉到src point
+                #####
                 srcx,srcy = src_point[0],src_point[1]
-                src_weight = getweight(dstx,dsty,dst_line) #(x,y,line)
+                #print('srcpoint L '+str(srcx)+' '+str(srcy))
+                #####
+                src_weight = getweight(dstx,dsty,dst_line) #(x,y,line) #src point的weight
+                #print('W'+str(src_weight))
                 leftxsum=leftxsum+srcx*src_weight
                 leftysum=leftysum+srcy*src_weight
                 leftWeightSum=leftWeightSum+src_weight
-
-                #右圖為來源 
+                # print('L '+str(leftxsum)+' '+str(leftysum))
+                # print('LS '+str(leftWeightSum))
+                
+                
+                #右圖為來源
                 #rightline = rline[i] = (px2 py2 qx2 qy2)
                 dstline=[] #(dpx dpy dqx dqy)
                 src_line = rline[i]
-                dst_line = warpLine[frame_index]
+                dst_line = warpLine[i]
                 newu = getu(dstx,dsty,dst_line) #(x,y,line)
                 newv = getv(dstx,dsty,dst_line) #(x,y,line)
-                src_point = getpoint(newu, newv,src_line) #(u,v,line)
+                src_point = getpoint(newu, newv,src_line) #(u,v,line)              
+                #####
                 srcx,srcy = src_point[0],src_point[1]
+                #print('srcpoint R '+str(srcx)+' '+str(srcy))
+                #####
                 src_weight = getweight(dstx,dsty,dst_line) #(x,y,line)
+                #print('W'+str(src_weight))
                 rightxsum = rightxsum+srcx*src_weight
                 rightysum = rightysum+srcy*src_weight
                 rightWeightSum=rightWeightSum+src_weight
-
+                # print('R '+str(rightxsum)+' '+str(rightysum))
+                # print('RS '+str(rightWeightSum))
+                
+                #print(leftWeightSum,rightWeightSum)
+            
+            # X'
             lsrcx=leftxsum/leftWeightSum
             lsrcy=leftysum/leftWeightSum
             rsrcx=rightxsum/rightWeightSum
             rsrcy=rightysum/rightWeightSum
+
+            # print(lsrcx,lsrcy,rsrcx,rsrcy)
 
             #邊界
             if (lsrcx < 0):
                 lsrcx = 0
             if (lsrcy < 0):
                 lsrcy = 0
-            if (lsrcx >= rows):
-                lsrcx = rows - 1
-            if (lsrcy >= cols):
-                lsrcy = cols - 1
+            if (lsrcx >= cols):
+                lsrcx = cols - 1
+            if (lsrcy >= rows):
+                lsrcy = rows - 1
             if (rsrcx < 0):
                 rsrcx = 0
             if (rsrcy < 0):
                 rsrcy = 0
-            if (rsrcx >= rows):
-                rsrcx = rows - 1
-            if (rsrcy >= cols):
-                rsrcy = cols - 1
+            if (rsrcx >= cols):
+                rsrcx = cols - 1
+            if (rsrcy >= rows):
+                rsrcy = rows - 1
+
+            # print(lsrcx,lsrcy,rsrcx,rsrcy)
+
+            leftout=limg[int(lsrcy),int(lsrcx)]
+            rightout=rimg[int(rsrcy),int(rsrcx)]
+            
+            # print(leftout)
+            # print(rightout)
 
             leftout=bilinear(limg,lsrcx,lsrcy)
             rightout=bilinear(rimg,rsrcx,rsrcy)
             
-            b=(1 - ratio)*leftout[0]+ratio*rightout[0]
-            g=(1 - ratio)*leftout[1]+ratio*rightout[1]
-            r=(1 - ratio)*leftout[2]+ratio*rightout[2]
+            # print(leftout)
+            # print(rightout)
 
-            new_image[x,y]=(b,g,r)
-            left_image[x,y]=leftout
-            right_image[x,y]=rightout
+            b=int((1 - ratio)*leftout[0]+ratio*rightout[0])
+            g=int((1 - ratio)*leftout[1]+ratio*rightout[1])
+            r=int((1 - ratio)*leftout[2]+ratio*rightout[2])
 
-    cv2.imwrite("result/new.jpg", new_image)
+            # print(x,y,b,g,r)
+
+            new_image[y,x]=(b,g,r)
+            left_image[y,x]= (leftout[0], leftout[1], leftout[2])
+            right_image[y,x]= (rightout[0], rightout[1], rightout[2])
+
+            ##########??????????????????
+            #print((left_image[10,15]))
+            ##########??????????????????
+
+            #print('left'+str(left_image[10,15][0])+' '+str(left_image[10,15][1])+' '+str(left_image[10,15][2]))
+            
+
+
     cv2.imwrite("result/left.jpg", left_image)
     cv2.imwrite("result/right.jpg", right_image)
+    cv2.imwrite("result/new.jpg", new_image)
 
-    print('max:'+str(maxx)+" "+str(maxy))
+    #print('max:'+str(maxx)+" "+str(maxy))
         #######################################
 
 
@@ -357,7 +411,7 @@ while (1):
         #writeimg()
         # pqtomld(rline[0])
         # addimg()
-        # wrapping()
+        # warpping()
         # print(getu(3,10,rline[0]))
         # print(getv(3,5,rline[0]))
         #print(getweight(3,5,rline[0]))
