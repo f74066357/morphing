@@ -164,8 +164,6 @@ def caldegree(line):
     degree = math.atan2((qy - py), (qx - px))
     return degree
 
-maxx,maxy=0,0
-
 def bilinear(img,x,y): #(image,srcx,srcy)
     #print(x,y) max:188.99826066206413 254.99930133116848
     global maxx,maxy
@@ -363,10 +361,6 @@ def warpping(k):
             left_image[y,x]= (leftout[0], leftout[1], leftout[2])
             right_image[y,x]= (rightout[0], rightout[1], rightout[2])
 
-            ##########??????????????????
-            #print((left_image[10,15]))
-            ##########??????????????????
-
             #print('left'+str(left_image[10,15][0])+' '+str(left_image[10,15][1])+' '+str(left_image[10,15][2]))
             
 
@@ -378,7 +372,7 @@ def warpping(k):
     #print('max:'+str(maxx)+" "+str(maxy))
         #######################################
 
-
+'''
 #add weight
 alpha=0.5
 def addimg():
@@ -388,6 +382,7 @@ def addimg():
     beta=1-alpha
     img= cv2.addWeighted(img1, alpha, img2, beta, 0.0)
     cv2.imshow('add', img)
+'''
 
 while (1):
     cv2.imshow('left', img1)
